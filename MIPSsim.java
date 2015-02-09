@@ -6,29 +6,6 @@ import java.io.File;
 import java.util.*;
 import java.util.Map.Entry;
 
-class Queue {
-	private LinkedList<instruction> list = new LinkedList<instruction>();
-	private int size = 8; // Restrict the instruction tokens
-
-	public void put(instruction v) {
-		if (size > 0) {
-			list.addFirst(v);
-			--size;
-		} else {
-			System.out.println("Only 8 instruction tokens are allowed");
-		}
-	}
-
-	public instruction get() {
-		++size;
-		return list.removeLast();
-	}
-
-	public boolean isEmpty() {
-		return list.isEmpty();
-	}
-
-}
 
 class register {
 	int value;
@@ -57,44 +34,20 @@ class register {
 
 }
 
-class instruction {
-	String opcode = null;
-	String desReg = null;
-	String sourceReg1 = null;
-	String sourceReg2 = null;
-	Integer imm = Integer.MIN_VALUE;
 
-	public instruction(String s) {
-		String[] parts = s.split(",");
-		if (parts[0].equals("LD")) {
-			opcode = parts[0];
-			desReg = parts[1];
-			sourceReg1 = parts[2];
-			imm = Integer.parseInt(parts[3]);
-		} else {
-			opcode = parts[0];
-			desReg = parts[1];
-			sourceReg1 = parts[2];
-			sourceReg2 = parts[3];
-		}
-	}
-
-	void print() {
-		if (this.opcode.equals("LD")) {
-			System.out.println(opcode + " " + desReg + " " + sourceReg1 + " "+ imm);
-		} else {
-			System.out.println(opcode + " " + desReg + " " + sourceReg1 + " "+ sourceReg2);
-		}
-	}
-
-}
 
 public class MIPSsim {
-
+	
+	public static ArrayList<String> INB = new ArrayList<String>();
+	public static ArrayList<String> LIB = new ArrayList<String>();
+	public static ArrayList<String> ADB = new ArrayList<String>();
+	public static ArrayList<String> AIB = new ArrayList<String>();
+	public static ArrayList<String> REB = new ArrayList<String>();
 	public static Map<String, register> RGF = new HashMap<String, register>(8); 
 	public static Map<Integer, Integer> DAM = new HashMap<Integer, Integer>(8); 
-	public static Queue INM = new Queue();
-
+	public static ArrayList<String> INM = new ArrayList<String>();
+	public static int step=0;
+	
 	public static void readFile() {
 		File file = null;
 		Scanner input = null;
@@ -105,9 +58,7 @@ public class MIPSsim {
 			input = new Scanner(file);
 			while (input.hasNextLine()) {
 				String line = input.nextLine();
-				line = line.substring(1, line.length() - 1);
-				instruction temp = new instruction(line);
-				INM.put(temp);
+				INM.add(line);
 			}
 			input.close();
 		} catch (Exception ex) {
@@ -152,8 +103,8 @@ public class MIPSsim {
 
 	public static void testInput() {
 		// Instruction file
-		while (!INM.isEmpty()) {
-			INM.get().print();
+		for(int i=0;i<INM.size();i++){
+			System.out.println(INM.get(i));
 		}
 		// Registers
 		Iterator<Entry<String, register>> it = RGF.entrySet().iterator();
@@ -173,11 +124,60 @@ public class MIPSsim {
 
 
 	}
+	
+	public static void printHelp(ArrayList<String> k){
+		if(k.size()==0){
+			System.out.println();
+		}
+		else{
+			for(int i=0;i<(k.size()-1);i++){
+				System.out.print(k.get(i)+",");
+			}
+			System.out.println(k.get(k.size()-1));
+		}
+	}
+
+	public static void simPrint(){
+		System.out.println("STEP "+step+":");
+		System.out.print("INM:");
+		printHelp(INM);
+		System.out.print("INB:");
+		printHelp(INB);
+		System.out.print("AIB:");
+		printHelp(AIB);
+		System.out.print("LIB:");
+		printHelp(LIB);
+		System.out.print("ADB:");
+		printHelp(ADB);
+		System.out.print("REB:");
+		printHelp(REB);
+		System.out.print("RGF:");
+		Iterator<Entry<String, register>> it = RGF.entrySet().iterator();
+		while (it.hasNext()) {
+			Entry<String, register> pairs = it.next();
+			register k = (register) pairs.getValue();
+			System.out.print("<"+pairs.getKey() + "," + k.getValue()+">"+",");
+			it.remove(); 
+		}
+		System.out.println();
+		System.out.print("DAM:");
+		Iterator<Entry<Integer, Integer>> it2 = DAM.entrySet().iterator();
+		while (it2.hasNext()) {
+			Entry<Integer, Integer> pairs = it2.next();
+			System.out.print("<"+pairs.getKey() + "," + pairs.getValue()+">"+",");
+			it2.remove(); 
+		}
+
+		System.out.println();
+		System.out.println();
+		
+	}
 
 	public static void main(String[] args) {
 
 		MIPSsim.readFile();
-		MIPSsim.testInput();
+		MIPSsim.simPrint();
+		
 
 	}
 
