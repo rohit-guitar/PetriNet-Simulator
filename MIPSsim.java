@@ -1,6 +1,9 @@
 /*
- * "I have neither given nor received any unauthorized aid on this assignment"
+ * “ On my honor, I have neither given nor received unauthorized aid on this assignment ”.
+ *Authored By :- Rohit Garg
+ *UFID:- 17622194
  */
+
 
 import java.io.File;
 import java.util.*;
@@ -46,7 +49,7 @@ public class MIPSsim {
 	public static Map<String, register> RGF = new HashMap<String, register>(8); 
 	public static Map<Integer, Integer> DAM = new HashMap<Integer, Integer>(8); 
 	public static ArrayList<String> INM = new ArrayList<String>();
-	public static int step=0;
+	public static int step=-1;
 	
 	public static void readFile() {
 		File file = null;
@@ -62,6 +65,7 @@ public class MIPSsim {
 			}
 			input.close();
 		} catch (Exception ex) {
+			System.out.println("Instructions file is not fond");
 			ex.printStackTrace();
 		}
 		/* Register file */
@@ -79,6 +83,7 @@ public class MIPSsim {
 			}
 			input.close();
 		} catch (Exception ex) {
+			System.out.println("Register file is not fond");
 			ex.printStackTrace();
 		}
 		/* Data access memory */
@@ -96,6 +101,7 @@ public class MIPSsim {
 			}
 			input.close();
 		} catch (Exception ex) {
+			System.out.println("Data memory file is not fond");
 			ex.printStackTrace();
 		}
 
@@ -107,6 +113,7 @@ public class MIPSsim {
 			System.out.println(INM.get(i));
 		}
 		// Registers
+		
 		Iterator<Entry<String, register>> it = RGF.entrySet().iterator();
 		while (it.hasNext()) {
 			Entry<String, register> pairs = it.next();
@@ -114,6 +121,7 @@ public class MIPSsim {
 			System.out.println(pairs.getKey() + " = " + k.getValue());
 			it.remove(); 
 		}
+		
 		// Data access memory
 		Iterator<Entry<Integer, Integer>> it2 = DAM.entrySet().iterator();
 		while (it2.hasNext()) {
@@ -152,33 +160,158 @@ public class MIPSsim {
 		System.out.print("REB:");
 		printHelp(REB);
 		System.out.print("RGF:");
-		Iterator<Entry<String, register>> it = RGF.entrySet().iterator();
-		while (it.hasNext()) {
-			Entry<String, register> pairs = it.next();
-			register k = (register) pairs.getValue();
-			System.out.print("<"+pairs.getKey() + "," + k.getValue()+">"+",");
-			it.remove(); 
+		List<String> keys = new ArrayList<String>(RGF.keySet());
+		Collections.sort(keys);
+		int size1=keys.size();
+		for(int i=0;i<size1-1;i++){
+			register temp= RGF.get(keys.get(i));
+			if(!(temp.getValue()==Integer.MIN_VALUE))
+			System.out.print("<"+keys.get(i)+","+temp.getValue()+">"+",");
 		}
-		System.out.println();
+		register temp= RGF.get(keys.get(size1-1));
+		System.out.println("<"+keys.get(size1-1)+","+temp.getValue()+">");
+		
 		System.out.print("DAM:");
-		Iterator<Entry<Integer, Integer>> it2 = DAM.entrySet().iterator();
-		while (it2.hasNext()) {
-			Entry<Integer, Integer> pairs = it2.next();
-			System.out.print("<"+pairs.getKey() + "," + pairs.getValue()+">"+",");
-			it2.remove(); 
+		List<Integer> keys1 = new ArrayList<Integer>(DAM.keySet());
+		Collections.sort(keys1);
+		int size2=keys1.size();
+		for(int i=0;i<size2-1;i++){
+			Integer temp1= DAM.get(keys1.get(i));
+			System.out.print("<"+keys1.get(i)+","+temp1.toString()+">"+",");
 		}
-
-		System.out.println();
+		Integer temp1= DAM.get(keys1.get(size2-1));
+		System.out.println("<"+keys1.get(size2-1)+","+temp1.toString()+">");
 		System.out.println();
 		
 	}
 
 	public static void main(String[] args) {
-
 		MIPSsim.readFile();
-		MIPSsim.simPrint();
-		
-
+		boolean done= INM.isEmpty() && INB.isEmpty() && AIB.isEmpty() && LIB.isEmpty() && ADB.isEmpty() && REB.isEmpty();
+		while(!done)
+		{	
+			done= INM.isEmpty() && INB.isEmpty() && AIB.isEmpty() && LIB.isEmpty() && ADB.isEmpty() && REB.isEmpty();
+			step++;
+			MIPSsim.simPrint();
+			write();
+			load();
+			asu();
+			addr();
+			issue();
+			decode();		
+		}
 	}
+	
+	public static void decode(){
+		if(INM.isEmpty()){return;}
+		else{
+			String input =  INM.remove(0);
+			input=input.substring(1, input.length()-1);
+			String[] ins = input.split(",");
+			if(!RGF.containsKey(ins[1])){
+				RGF.put(ins[1], new register(Integer.MIN_VALUE));
+			}
+				if(ins[0].equals("LD")){
+					register src = RGF.get(ins[2]);
+					register des= RGF.get(ins[1]);
+						if(src.getAvail()){
+							String next="<LD,"+ins[1]+","+src.getValue()+","+ins[3]+">";
+							INB.add(next);
+							des.triggerAvail();
+						}
+						else{return;}
+				}
+				else{
+					register des = RGF.get(ins[1]);
+					register src1 = RGF.get(ins[2]);
+					register src2 = RGF.get(ins[3]);
+						if(src1.getAvail() && src2.getAvail()){
+							String next= "<"+ins[0]+","+ins[1]+","+src1.getValue()+","+src2.getValue()+">";
+							INB.add(next);
+							des.triggerAvail();
+						}
+						else{return;}
+				}
+			
+		}
+	}
+	
+	public static void issue(){
+		if(INB.isEmpty()){return;}
+		else{
+			String input =  INB.remove(0);
+			String input2=input.substring(1, input.length()-1);
+			String[] ins = input2.split(",");
+				if(ins[0].equals("LD")){
+					LIB.add(input);
+				}
+				else{
+					AIB.add(input);
+				}
+			
+		}
+		
+	}
+	
+	public static void addr(){
+		if(LIB.isEmpty()){return;}
+		else{
+			String input =  LIB.remove(0);
+			String input2=input.substring(1, input.length()-1);
+			String[] ins = input2.split(",");
+			int add= Integer.parseInt(ins[2])+Integer.parseInt(ins[3]);
+			String next = "<"+ins[1]+","+add+">";
+			ADB.add(next);
+		}
+	}
+	
+	public static void asu(){
+		if(AIB.isEmpty()){return;}
+		else{
+			String input =  AIB.remove(0);
+			String input2=input.substring(1, input.length()-1);
+			String[] ins = input2.split(",");
+				if(ins[0].equals("ADD")){
+					int add= Integer.parseInt(ins[2])+Integer.parseInt(ins[3]);
+					String next = "<"+ins[1]+","+add+">";
+					REB.add(next);
+				}
+				else{
+					int add= Integer.parseInt(ins[2])-Integer.parseInt(ins[3]);
+					String next = "<"+ins[1]+","+add+">";
+					REB.add(next);
+				}	
+		}
+	}
+	
+	public static void load(){
+		if(ADB.isEmpty()){return;}
+		else{
+			String input =  ADB.remove(0);
+			String input2=input.substring(1, input.length()-1);
+			String[] ins = input2.split(",");
+			int value = DAM.get(Integer.parseInt(ins[1]));
+			String next = "<"+ins[0]+","+value+">";
+			REB.add(next);
+		}
+	}
+	public static void write(){
+		if(REB.isEmpty()){return;}
+		else{
+			String input =  REB.remove(0);
+			String input2=input.substring(1, input.length()-1);
+			String[] ins = input2.split(",");
+			int newValue= Integer.parseInt(ins[1]);
+			register des=RGF.get(ins[0]);
+			des.setValue(newValue);
+			des.triggerAvail();
+		}
+	}
+	
+	
+	
+	
+	
+	
 
 }
